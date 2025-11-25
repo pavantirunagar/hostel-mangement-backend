@@ -12,7 +12,5 @@ router.post("/addstudents", protect, validate(studentRegisterSchema), addStudent
 router.get("/students", protect, listStudents);
 router.put("/update/:id", updateStudent);
 router.delete("/delete/:id", protect, deleteStudent);
-router.get("/:id", protect, getSingleStudent);
-
-
+router.get("/student/:id", protect, getSingleStudent);
 export default router;
