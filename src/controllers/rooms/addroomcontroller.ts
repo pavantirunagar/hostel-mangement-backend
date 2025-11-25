@@ -3,27 +3,35 @@ import { Room } from "../../module/roommodel";
 
 export const addRoom = async (req: Request, res: Response) => {
   try {
-    const { roomNumber, capacity } = req.body;
+    const { roomNumber, capacity, floor } = req.body;
 
-    // 1. Validate input
-    if (!roomNumber || !capacity) {
-      return res.status(400).json({ message: "roomNumber and capacity are required" });
+    // Validation
+    if (!roomNumber || !capacity || floor === undefined) {
+      return res.status(400).json({ message: "roomNumber, capacity, and floor are required" });
     }
 
-    // 2. Check if room already exists
+    // Check existing room
     const existingRoom = await Room.findOne({ roomNumber });
     if (existingRoom) {
       return res.status(400).json({ message: "Room already exists" });
     }
 
-    // 3. Create room
-    const room = await Room.create({ roomNumber, capacity });
+    const room = await Room.create({
+      roomNumber,
+      capacity,
+      floor,
+      occupied: 0,
+      isAvailable: true,
+    });
 
-    return res.status(201).json({
-      message: "Room created successfully",
+    res.status(201).json({
+      message: "Room added successfully",
       room,
     });
   } catch (error) {
-    return res.status(500).json({ message: "Server error", error });
+    res.status(500).json({
+      message: "Server error",
+      error,
+    });
   }
 };
