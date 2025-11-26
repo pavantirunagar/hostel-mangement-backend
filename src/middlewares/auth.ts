@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 interface TokenPayload {
   id: string;
-  role: string;
+  hostel: string;
 }
 
 export const protect = async (
@@ -25,14 +25,13 @@ export const protect = async (
       process.env.JWT_SECRET as string
     ) as TokenPayload;
 
-    (req as any).user = {
+    req.user = {
       id: decoded.id,
-      role: decoded.role,
+      hostel: decoded.hostel,
     };
 
     next();
   } catch (error) {
-      console.log("Protect middleware error:", error);
     return res.status(401).json({ message: "Unauthorized" });
   }
 };

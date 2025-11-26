@@ -11,8 +11,8 @@ export const getSingleStudent = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    return res.json({
-      message: "Student fetched successfully",
+    return res.status(200).json({
+      success: true,
       student,
     });
   } catch (error) {

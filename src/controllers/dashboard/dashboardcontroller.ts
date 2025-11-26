@@ -1,55 +1,43 @@
 import { Request, Response } from "express";
+import Room from "../../module/roommodel";
 import { Student } from "../../module/studentsmodel";
-import { Room } from "../../module/roommodel";
 
 export const getDashboard = async (req: Request, res: Response) => {
   try {
-    // Student stats
-    const totalStudents = await Student.countDocuments();
-    const activeStudents = await Student.countDocuments({ status: "active" });
-    const leftStudents = await Student.countDocuments({ status: "left" });
+    const hostelId = req.user!.hostel;
 
-    // Room stats
-    const totalRooms = await Room.countDocuments();
+    // 1️⃣ Total Rooms
+    const totalRooms = await Room.countDocuments({ hostel: hostelId });
 
-    const fullRooms = await Room.countDocuments({
-      $expr: { $eq: ["$occupied", "$capacity"] }
+    // 2️⃣ Total Students
+    const totalStudents = await Student.countDocuments({ hostel: hostelId });
+
+    // 3️⃣ Beds Calculation
+    const rooms = await Room.find({ hostel: hostelId });
+
+    let totalBeds = 0;
+    let occupiedBeds = 0;
+
+    rooms.forEach((room) => {
+      totalBeds += room.totalBeds;
+      occupiedBeds += room.totalBeds; // Later update based on assigned students
     });
 
-    const availableRooms = await Room.countDocuments({
-      $expr: { $lt: ["$occupied", "$capacity"] }
-    });
+    const availableBeds = totalBeds - occupiedBeds;
 
-    // Capacity stats (aggregation)
-    const stats = await Room.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalCapacity: { $sum: "$capacity" },
-          totalOccupiedSeats: { $sum: "$occupied" },
-        },
-      },
-    ]);
-
-    const totalCapacity = stats[0]?.totalCapacity || 0;
-    const totalOccupiedSeats = stats[0]?.totalOccupiedSeats || 0;
-    const totalFreeSeats = totalCapacity - totalOccupiedSeats;
-
-    res.json({
+    return res.status(200).json({
       success: true,
       data: {
-        totalStudents,
-        activeStudents,
-        leftStudents,
         totalRooms,
-        occupiedRooms: fullRooms,
-        availableRooms,
-        totalCapacity,
-        totalOccupiedSeats,
-        totalFreeSeats,
+        totalStudents,
+        totalBeds,
+        occupiedBeds,
+        availableBeds,
       },
     });
+
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error(error);
+    return res.status(500).json({ message: "Server Error" });
   }
 };

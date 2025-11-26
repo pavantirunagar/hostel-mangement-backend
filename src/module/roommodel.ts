@@ -1,27 +1,32 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Room extends Document {
+  floor: number;
   roomNumber: string;
-  floor: number;      
-  capacity: number;
-  occupied: number;
+  pricePerBed: number;
+  totalBeds: number;
+  occupiedBeds: number;
   isAvailable: boolean;
+  hostel: mongoose.Schema.Types.ObjectId;
 }
 
 const roomSchema = new Schema<Room>(
   {
-    roomNumber: { type: String, required: true, unique: true },
-    floor: { type: Number, required: true }, 
-    capacity: { type: Number, required: true },
-    occupied: { type: Number, default: 0 },
-    isAvailable: { type: Boolean, default: true },
+    floor: { type: Number, required: true },
+    roomNumber: { type: String, required: true },
+    pricePerBed: { type: Number, required: true },
+    totalBeds: { type: Number, required: true },
+
+    // 👇 Required for student assignment + room availability
+    occupiedBeds: { type: Number, required: true, default: 0 },
+    isAvailable: { type: Boolean, required: true, default: true },
+
+    hostel: { type: Schema.Types.ObjectId, ref: "Hostel", required: true },
   },
   { timestamps: true }
 );
 
-roomSchema.pre("save", function (next) {
-  this.isAvailable = this.occupied < this.capacity;
-  next();
-});
+// Unique index per hostel
+roomSchema.index({ roomNumber: 1, hostel: 1 }, { unique: true });
 
-export const Room = mongoose.model<Room>("Room", roomSchema);
+export default mongoose.model<Room>("Room", roomSchema);

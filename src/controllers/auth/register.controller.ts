@@ -1,49 +1,70 @@
 import { Request, Response } from "express";
 import { User } from "../../module/usermodel";
-import  jwt  from "jsonwebtoken";
-
+import jwt from "jsonwebtoken";
+import { Hostel } from "../../module/hostelmodel";
+import { registerSchema } from "../../validations/registervalidations";
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role } = req.body;
+    // Validate request data using Zod
+    const validatedData = registerSchema.parse(req.body);
 
-    // 1. Validate
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    const { name, email, password, hostelName, totalRooms } = validatedData;
 
-    // 2. Check existing user
+    // Check if email exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "Email already exists" });
     }
 
-    // 3. Create user
+    // Create User
     const newUser = await User.create({
       name,
       email,
       password,
-      role,
     });
 
-    // 4. JWT token
+    // Create Hostel linked to user
+    const newHostel = await Hostel.create({
+      hostelName,
+      owner: newUser._id,
+      totalRooms,
+    });
+
+    newUser.hostel = newHostel._id;
+    await newUser.save();
+
+    // Generate JWT
     const token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
+      { id: newUser._id, hostel: newHostel._id },
       process.env.JWT_SECRET as string,
       { expiresIn: "7d" }
     );
 
     return res.status(201).json({
-      message: "User registered successfully",
+      success: true,
+      message: "Owner + Hostel created Successfully",
       user: {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role,
+        hostel: newHostel._id,
       },
+      hostel: newHostel,
       token,
     });
+
   } catch (error) {
-    return res.status(500).json({ message: "Server error", error });
+    if (error instanceof Error && "issues" in error) {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: error,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Server error",
+      error,
+    });
   }
 };

@@ -1,40 +1,42 @@
 import { Request, Response } from "express";
 import { Student } from "../../module/studentsmodel";
-import { Room } from "../../module/roommodel"; 
+import Room from "../../module/roommodel";
 
 export const deleteStudent = async (req: Request, res: Response) => {
   try {
-    const studentId = req.params.id;
+    const { id } = req.params;
 
-    // 1. Find the student
-    const student = await Student.findById(studentId);
+    const student = await Student.findById(id);
 
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    // 2. If student has a room, decrease occupancy
-    if (student.room) {
-      const room = await Room.findById(student.room);
+    const roomId = student.room?.toString();
 
-      if (room) {
-        // decrease occupancy but never below 0
-        room.occupied = Math.max(0, room.occupied - 1);
+    // Delete student record
+    await student.deleteOne();
 
-        // update availability
-        room.isAvailable = room.occupied < room.capacity;
+    // Update the room’s occupancy if room assigned
+    if (roomId) {
+      const roomStudentsCount = await Student.countDocuments({ room: roomId });
+      await Room.findByIdAndUpdate(roomId, {
+        isAvailable: true,
+      });
 
-        await room.save();
+      // If room is fully empty -> available
+      if (roomStudentsCount === 0) {
+        await Room.findByIdAndUpdate(roomId, { isAvailable: true });
       }
     }
 
-    // 3. Delete the student
-    await Student.findByIdAndDelete(studentId);
-
-    res.json({ message: "Student deleted successfully" });
+    return res.status(200).json({
+      success: true,
+      message: "Student removed successfully",
+    });
 
   } catch (error) {
     console.error("Delete Student Error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server Error" });
   }
 };

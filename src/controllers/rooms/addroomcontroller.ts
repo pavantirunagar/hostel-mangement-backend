@@ -1,37 +1,41 @@
 import { Request, Response } from "express";
-import { Room } from "../../module/roommodel";
+import Room from "../../module/roommodel";
 
 export const addRoom = async (req: Request, res: Response) => {
   try {
-    const { roomNumber, capacity, floor } = req.body;
+    const { floor, roomNumber, totalBeds, pricePerBed } = req.body;
+    const hostelId = req.user!.hostel;
 
     // Validation
-    if (!roomNumber || !capacity || floor === undefined) {
-      return res.status(400).json({ message: "roomNumber, capacity, and floor are required" });
+    if (!floor || !roomNumber || !totalBeds || !pricePerBed) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check existing room
-    const existingRoom = await Room.findOne({ roomNumber });
+    if (totalBeds <= 0) {
+      return res.status(400).json({ message: "totalBeds must be at least 1" });
+    }
+
+    if (!Number.isInteger(pricePerBed) || pricePerBed <= 0) {
+      return res.status(400).json({ message: "pricePerBed must be a positive integer" });
+    }
+
+    // Check if room already exists in this hostel
+    const existingRoom = await Room.findOne({ roomNumber, hostel: hostelId });
     if (existingRoom) {
-      return res.status(400).json({ message: "Room already exists" });
+      return res.status(400).json({ message: "Room already exists in this hostel" });
     }
 
-    const room = await Room.create({
-      roomNumber,
-      capacity,
+    const newRoom = await Room.create({
       floor,
-      occupied: 0,
-      isAvailable: true,
+      roomNumber,
+      totalBeds,
+      pricePerBed,
+      hostel: hostelId,
     });
 
-    res.status(201).json({
-      message: "Room added successfully",
-      room,
-    });
+    res.status(201).json({ success: true, room: newRoom });
   } catch (error) {
-    res.status(500).json({
-      message: "Server error",
-      error,
-    });
+    console.error("Add Room Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };

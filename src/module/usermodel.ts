@@ -5,7 +5,7 @@ export interface User extends Document {
   name: string;
   email: string;
   password: string;
-  role: "admin" | "warden";
+  hostel: mongoose.Types.ObjectId;
 }
 
 export interface IUserMethods {
@@ -17,7 +17,10 @@ const userSchema = new Schema<User & IUserMethods>(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true, minlength: 6 },
-    role: { type: String, enum: ["admin", "warden"], default: "admin" },
+    hostel: {
+      type: Schema.Types.ObjectId,
+      ref: "Hostel",
+    },
   },
   { timestamps: true }
 );
@@ -25,21 +28,16 @@ const userSchema = new Schema<User & IUserMethods>(
 // Hash password before save
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-
   next();
 });
 
-// Compare password method
+// Compare Password Method
 userSchema.methods.comparePassword = async function (
   enteredPassword: string
 ): Promise<boolean> {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-export const User = mongoose.model<User & IUserMethods>(
-  "User",
-  userSchema
-);
+export const User = mongoose.model<User & IUserMethods>("User", userSchema);

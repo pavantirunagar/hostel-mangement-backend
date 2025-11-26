@@ -2,22 +2,16 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
-
-    "typeRoots": ["./src/types", "./node_modules/@types"],
-
     "rootDir": "./src",
     "outDir": "./dist",
-
     "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-
     "skipLibCheck": true,
     "resolveJsonModule": true,
-
-    "types": ["node"],
+    "forceConsistentCasingInFileNames": true,
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     "lib": ["esnext"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/types/**/*.d.ts"],
   "exclude": ["node_modules"]
 }

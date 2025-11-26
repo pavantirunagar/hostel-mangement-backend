@@ -1,13 +1,10 @@
-import { UserRole } from "../../module/usermodel";
+import "express-serve-static-core";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        role: UserRole;
-      };
-    }
+declare module "express-serve-static-core" {
+  interface Request {
+    user?: {
+      id: string;
+      hostel: string;
+    };
   }
 }
-export {}

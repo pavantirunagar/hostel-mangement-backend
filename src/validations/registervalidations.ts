@@ -3,10 +3,13 @@ import { z } from "zod";
 export const registerSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   email: z.string().email("Invalid email format"),
-  password: z
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  hostelName: z.string().min(3, "Hostel name is required"),
+  totalRooms: z
     .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must include a special character")
-    .regex(/[0-9]/, "Password must include a number"),
-  role: z.enum(["admin", "warden"]).default("admin"),
+    .regex(/^\d+$/, "Total rooms must be a positive number")
+    .transform((val) => Number(val))
+    .refine((val) => val >= 1, {
+      message: "Total rooms must be at least 1",
+    }),
 });
