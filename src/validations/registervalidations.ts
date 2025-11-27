@@ -5,9 +5,9 @@ export const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   hostelName: z.string().min(3, "Hostel name is required"),
+  
   totalRooms: z
-    .string()
-    .regex(/^\d+$/, "Total rooms must be a positive number")
+    .union([z.string(), z.number()])
     .transform((val) => Number(val))
     .refine((val) => val >= 1, {
       message: "Total rooms must be at least 1",
