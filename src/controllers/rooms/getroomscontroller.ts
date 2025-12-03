@@ -1,33 +1,37 @@
 import { Request, Response } from "express";
 import Room from "../../module/roommodel";
-import { Student } from "../../module/studentsmodel";
 
 export const getRooms = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostel;
+    const { search, status } = req.query;
 
-    const rooms = await Room.find({ hostel: hostelId }).sort({ roomNumber: 1 });
+    const query: any = { hostel: hostelId };
 
-    const roomsWithOccupancy = await Promise.all(
-      rooms.map(async (room) => {
-        const occupiedCount = await Student.countDocuments({ room: room._id });
+    if (search) {
+      const searchValue = search.toString();
+      query.$or = [
+        { roomNumber: { $regex: searchValue, $options: "i" } },
+        { floor: isNaN(Number(searchValue)) ? undefined : Number(searchValue) }
+      ].filter(Boolean);
+    }
 
-        return {
-          ...room.toObject(),
-          occupiedBeds: occupiedCount,
-          isAvailable: occupiedCount < room.totalBeds,
-        };
-      })
-    );
+    if (status === "available") {
+      query.isAvailable = true;
+    }
+    if (status === "full") {
+      query.isAvailable = false;
+    }
 
-    res.status(200).json({
+    const rooms = await Room.find(query).sort({ floor: 1 });
+
+    return res.status(200).json({
       success: true,
-      count: roomsWithOccupancy.length,
-      rooms: roomsWithOccupancy,
+      count: rooms.length,
+      rooms,
     });
-
   } catch (error) {
     console.error("Get Rooms Error:", error);
-    res.status(500).json({ message: "Server Error" });
+    return res.status(500).json({ message: "Server Error", error });
   }
 };
