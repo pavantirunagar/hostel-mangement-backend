@@ -5,32 +5,38 @@ import Room from "../../module/roommodel";
 export const deleteStudent = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const hostelId = req.user!.hostel;
 
-    const student = await Student.findById(id);
+    const student = await Student.findById(id).populate("room");
     if (!student) return res.status(404).json({ message: "Student not found" });
 
-    const roomId = student.room?.toString() || null;
+    // Owner can't delete other hostel's student
+   if (student.room) {
+  const room = student.room as any; // populated room
 
-    student.status = "vacated";
-    student.room = null as any;
-    await student.save();
+  if (room.hostel?.toString() !== hostelId.toString()) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+}
 
-    if (roomId) {
-      const room = await Room.findById(roomId);
-      if (room) {
-        room.occupiedBeds = Math.max(0, room.occupiedBeds - 1);
-        room.isAvailable = room.occupiedBeds < room.totalBeds;
-        await room.save();
-      }
+
+    const room = await Room.findById(student.room);
+    if (room) {
+      room.occupiedBeds = Math.max(0, room.occupiedBeds - 1);
+      room.isAvailable = room.occupiedBeds < room.totalBeds;
+      await room.save();
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Student marked as vacated",
-    });
+    student.status = "vacated";
+    student.room = null;
+    await student.save();
+
+    res.status(200).json({ success: true, message: "Student vacated successfully" });
+
   } catch (error) {
     console.error("Vacate Error:", error);
     res.status(500).json({ message: "Server Error" });
   }
 };
+
 

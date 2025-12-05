@@ -36,6 +36,7 @@ export const addStudent = async (req: Request, res: Response) => {
       address,
       room,
       joinDate: joinDateObj,
+      hostel: hostelId,
       dueDate,
       status: "active",
     });

@@ -3,39 +3,36 @@ import { Student } from "../../module/studentsmodel";
 
 export const listStudents = async (req: Request, res: Response) => {
   try {
-    const { search = "", status = "all", page = 1, limit = 10 } = req.query;
+    const hostelId = req.user!.hostel; // Logged in owner hostel
+    const { search, status = "all", page = 1, limit = 10 } = req.query;
 
-    const query: any = {};
+    let query: any = { hostel: hostelId };
 
-    if (status !== "all" && typeof status === "string") {
-      query.status = status.toLowerCase(); 
+    if (status !== "all") {
+      query.status = status;
     }
 
     const skip = (Number(page) - 1) * Number(limit);
 
     let students = await Student.find(query)
-      .populate("room")
+      .populate({
+        path: "room",
+        match: { hostel: hostelId }, // ensure room belongs to owner
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
 
-  if (search) {
-  const s = search.toString().toLowerCase();
-
-  students = students.filter((st: any) => {
-    const nameMatch = st.name.toLowerCase().includes(s);
-    const emailMatch = st.email.toLowerCase().includes(s);
-    const phoneMatch = st.phone.includes(s);
-
-    const roomMatch =
-      st.room &&
-      typeof (st.room as any).roomNumber !== "undefined" &&
-      (st.room as any).roomNumber.toString().toLowerCase().includes(s);
-
-    return nameMatch || emailMatch || phoneMatch || roomMatch;
-  });
-}
-
+    // Search (name, email, phone, roomNumber)
+    if (search) {
+      const s = search.toString().toLowerCase();
+      students = students.filter((st: any) =>
+        st.name.toLowerCase().includes(s) ||
+        st.email.toLowerCase().includes(s) ||
+        st.phone.includes(s) ||
+        st.room?.roomNumber?.toString().includes(s)
+      );
+    }
 
     const total = await Student.countDocuments(query);
 
@@ -53,6 +50,3 @@ export const listStudents = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
-
-

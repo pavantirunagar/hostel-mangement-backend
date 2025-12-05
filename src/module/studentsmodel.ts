@@ -6,6 +6,7 @@ export interface Student extends Document {
   email: string;
   phone: string;
   address: string;
+  hostel: Types.ObjectId; // Added
   room: Types.ObjectId | Room | null;
   status: "active" | "vacated";
   joinDate: Date;
@@ -19,12 +20,14 @@ const studentSchema = new Schema<Student>(
     phone: { type: String, required: true },
     address: { type: String, required: true },
 
-room: { type: Schema.Types.ObjectId, ref: "Room", required: true },
+    hostel: { type: Schema.Types.ObjectId, ref: "Hostel", required: true }, // 🔥 Added field
+
+    room: { type: Schema.Types.ObjectId, ref: "Room", default: null },
 
     status: { type: String, enum: ["active", "vacated"], default: "active" },
 
     joinDate: { type: Date, required: true },
-    dueDate: { type: Date,  },
+    dueDate: { type: Date },
   },
   { timestamps: true }
 );
