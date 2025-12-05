@@ -6,36 +6,47 @@ export const addRoom = async (req: Request, res: Response) => {
     const { floor, roomNumber, totalBeds, pricePerBed } = req.body;
     const hostelId = req.user!.hostel;
 
+    const floorNum = Number(floor);
+    const bedsNum = Number(totalBeds);
+    const priceNum = Number(pricePerBed);
+
     // Validation
-    if (!floor || !roomNumber || !totalBeds || !pricePerBed) {
+    if (!floorNum || !roomNumber || !bedsNum || !priceNum) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    if (totalBeds <= 0) {
+    if (bedsNum <= 0) {
       return res.status(400).json({ message: "totalBeds must be at least 1" });
     }
 
-    if (!Number.isInteger(pricePerBed) || pricePerBed <= 0) {
-      return res.status(400).json({ message: "pricePerBed must be a positive integer" });
-    }
-
-    // Check if room already exists in this hostel
-    const existingRoom = await Room.findOne({ roomNumber, hostel: hostelId });
-    if (existingRoom) {
-      return res.status(400).json({ message: "Room already exists in this hostel" });
+    if (priceNum <= 0) {
+      return res.status(400).json({ message: "pricePerBed must be a positive number" });
     }
 
     const newRoom = await Room.create({
-      floor,
+      floor: floorNum,
       roomNumber,
-      totalBeds,
-      pricePerBed,
+      totalBeds: bedsNum,
+      pricePerBed: priceNum,
       hostel: hostelId,
     });
 
-    res.status(201).json({ success: true, room: newRoom });
-  } catch (error) {
+    return res.status(201).json({
+      success: true,
+      message: "Room added successfully",
+      room: newRoom,
+    });
+
+  } catch (error: any) {
     console.error("Add Room Error:", error);
+
+    // MongoDB duplicate handling (room exists in same hostel)
+    if (error.code === 11000) {
+      return res.status(400).json({
+        message: "Room number already exists in this hostel"
+      });
+    }
+
     res.status(500).json({ message: "Server Error" });
   }
 };
