@@ -6,38 +6,45 @@ export const getDashboard = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostel;
 
-    // 1️⃣ Total Rooms
     const totalRooms = await Room.countDocuments({ hostel: hostelId });
 
-    // 2️⃣ Total Students
-    const totalStudents = await Student.countDocuments({ hostel: hostelId });
-
-    // 3️⃣ Beds Calculation
     const rooms = await Room.find({ hostel: hostelId });
 
-    let totalBeds = 0;
-    let occupiedBeds = 0;
+    const totalBeds = rooms.reduce((sum, r) => sum + r.totalBeds, 0);
+    const occupiedBeds = rooms.reduce((sum, r) => sum + r.occupiedBeds, 0);
+    const availableBeds = totalBeds - occupiedBeds;
 
-    rooms.forEach((room) => {
-      totalBeds += room.totalBeds;
-      occupiedBeds += room.totalBeds; // Later update based on assigned students
+    const fullRooms = rooms.filter(r => r.occupiedBeds >= r.totalBeds).length;
+    const availableRooms = rooms.filter(r => r.occupiedBeds < r.totalBeds).length;
+
+    const totalStudents = await Student.countDocuments({ hostel: hostelId });
+
+    const activeStudents = await Student.countDocuments({
+      hostel: hostelId,
+      status: "active"
     });
 
-    const availableBeds = totalBeds - occupiedBeds;
+    const vacatedStudents = await Student.countDocuments({
+      hostel: hostelId,
+      status: "vacated"
+    });
 
     return res.status(200).json({
       success: true,
       data: {
         totalRooms,
-        totalStudents,
+        availableRooms,
+        fullRooms,
         totalBeds,
         occupiedBeds,
         availableBeds,
+        totalStudents,
+        activeStudents,
+        vacatedStudents,
       },
     });
-
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Server Error" });
+    console.error("Dashboard Error:", error);
+    return res.status(500).json({ success: false, message: "Server Error" });
   }
 };
