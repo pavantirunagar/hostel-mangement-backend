@@ -3,28 +3,43 @@ import { Student } from "../../module/studentsmodel";
 
 export const listStudents = async (req: Request, res: Response) => {
   try {
-    const { room, status, name, page = 1, limit = 10 } = req.query;
+    const { search = "", status = "all", page = 1, limit = 10 } = req.query;
 
     const query: any = {};
 
-    if (room) query.room = room;
-    if (status) query.status = status;
-    if (name)
-      query.name = {
-        $regex: name,
-        $options: "i", // Case-insensitive
-      };
+    if (status !== "all" && typeof status === "string") {
+      query.status = status.toLowerCase(); 
+    }
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const students = await Student.find(query)
+    let students = await Student.find(query)
       .populate("room")
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
 
+  if (search) {
+  const s = search.toString().toLowerCase();
+
+  students = students.filter((st: any) => {
+    const nameMatch = st.name.toLowerCase().includes(s);
+    const emailMatch = st.email.toLowerCase().includes(s);
+    const phoneMatch = st.phone.includes(s);
+
+    const roomMatch =
+      st.room &&
+      typeof (st.room as any).roomNumber !== "undefined" &&
+      (st.room as any).roomNumber.toString().toLowerCase().includes(s);
+
+    return nameMatch || emailMatch || phoneMatch || roomMatch;
+  });
+}
+
+
     const total = await Student.countDocuments(query);
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       count: students.length,
       total,
@@ -32,7 +47,12 @@ export const listStudents = async (req: Request, res: Response) => {
       totalPages: Math.ceil(total / Number(limit)),
       students,
     });
+
   } catch (error) {
-    return res.status(500).json({ message: "Server error", error });
+    console.error("List Students Error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
+
+

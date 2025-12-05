@@ -1,11 +1,15 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
+import { Room } from "./roommodel";
 
 export interface Student extends Document {
   name: string;
   email: string;
   phone: string;
   address: string;
-  room: mongoose.Types.ObjectId;
+  room: Types.ObjectId | Room | null;
+  status: "active" | "vacated";
+  joinDate: Date;
+  dueDate: Date;
 }
 
 const studentSchema = new Schema<Student>(
@@ -14,7 +18,13 @@ const studentSchema = new Schema<Student>(
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true },
     address: { type: String, required: true },
-    room: { type: Schema.Types.ObjectId, ref: "Room", required: true }
+
+room: { type: Schema.Types.ObjectId, ref: "Room", required: true },
+
+    status: { type: String, enum: ["active", "vacated"], default: "active" },
+
+    joinDate: { type: Date, required: true },
+    dueDate: { type: Date,  },
   },
   { timestamps: true }
 );

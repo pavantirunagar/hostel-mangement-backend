@@ -7,36 +7,30 @@ export const deleteStudent = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const student = await Student.findById(id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
 
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
+    const roomId = student.room?.toString() || null;
 
-    const roomId = student.room?.toString();
+    student.status = "vacated";
+    student.room = null as any;
+    await student.save();
 
-    // Delete student record
-    await student.deleteOne();
-
-    // Update the room’s occupancy if room assigned
     if (roomId) {
-      const roomStudentsCount = await Student.countDocuments({ room: roomId });
-      await Room.findByIdAndUpdate(roomId, {
-        isAvailable: true,
-      });
-
-      // If room is fully empty -> available
-      if (roomStudentsCount === 0) {
-        await Room.findByIdAndUpdate(roomId, { isAvailable: true });
+      const room = await Room.findById(roomId);
+      if (room) {
+        room.occupiedBeds = Math.max(0, room.occupiedBeds - 1);
+        room.isAvailable = room.occupiedBeds < room.totalBeds;
+        await room.save();
       }
     }
 
     return res.status(200).json({
       success: true,
-      message: "Student removed successfully",
+      message: "Student marked as vacated",
     });
-
   } catch (error) {
-    console.error("Delete Student Error:", error);
-    return res.status(500).json({ message: "Server Error" });
+    console.error("Vacate Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
+

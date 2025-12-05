@@ -5,42 +5,46 @@ import Room from "../../module/roommodel";
 
 export const updateStudent = async (req: Request, res: Response) => {
   try {
-    const studentId = req.params.id;
-    const { name, email, phone, address } = req.body;
-    const hostelId = req.user!.hostel;
+    const { id } = req.params;
+    const { name, phone, address, room } = req.body;
 
-    // 1️⃣ Check if student exists & belongs to same hostel rooms
-    const student = await Student.findById(studentId).populate("room");
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+    const student = await Student.findById(id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    // If room changed → adjust previous and new room beds
+    if (room && room !== student.room?.toString()) {
+      const prevRoom = await Room.findById(student.room);
+      if (prevRoom) {
+        prevRoom.occupiedBeds = Math.max(0, prevRoom.occupiedBeds - 1);
+        prevRoom.isAvailable = prevRoom.occupiedBeds < prevRoom.totalBeds;
+        await prevRoom.save();
+      }
+
+      const newRoom = await Room.findById(room);
+      if (!newRoom) return res.status(404).json({ message: "New Room not found" });
+      if (newRoom.occupiedBeds >= newRoom.totalBeds)
+        return res.status(400).json({ message: "New room full" });
+
+      newRoom.occupiedBeds += 1;
+      newRoom.isAvailable = newRoom.occupiedBeds < newRoom.totalBeds;
+      await newRoom.save();
     }
 
-    const roomCheck = await Room.findOne({ _id: student.room, hostel: hostelId });
-    if (!roomCheck) {
-      return res.status(403).json({
-        message: "You are not authorized to update this student"
-      });
-    }
-
-    // 2️⃣ Update fields if present
-    if (name) student.name = name;
-    if (email) student.email = email;
-    if (phone) student.phone = phone;
-    if (address) student.address = address;
+    student.name = name || student.name;
+    student.phone = phone || student.phone;
+    student.address = address || student.address;
+    student.room = room || student.room;
 
     await student.save();
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "Student updated successfully",
       student,
     });
-
   } catch (error) {
-    console.error("Update Student Error:", error);
-    return res.status(500).json({
-      message: "Server error",
-      error: (error as Error).message,
-    });
+    console.error("Update Error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
