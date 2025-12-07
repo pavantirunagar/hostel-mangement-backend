@@ -6,7 +6,7 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email }).populate("hostel");
     if (!user) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
@@ -17,11 +17,8 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign(
-      {
-        id: user._id,
-        hostel: user.hostel,
-      },
-      process.env.JWT_SECRET as string,
+      { id: user._id, hostel: user.hostel?._id },
+      process.env.JWT_SECRET || "secret",
       { expiresIn: "7d" }
     );
 
@@ -32,12 +29,13 @@ export const login = async (req: Request, res: Response) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        hostel: user.hostel,
+        hostel: user.hostel?._id,
+        hostelName: (user.hostel as any)?.hostelName || null,
       },
       token,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Login Error:", error);
     return res.status(500).json({ message: "Server error", error });
   }
 };

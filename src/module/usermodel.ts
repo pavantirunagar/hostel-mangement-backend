@@ -20,6 +20,7 @@ const userSchema = new Schema<User & IUserMethods>(
     hostel: {
       type: Schema.Types.ObjectId,
       ref: "Hostel",
+      default: null,
     },
   },
   { timestamps: true }
